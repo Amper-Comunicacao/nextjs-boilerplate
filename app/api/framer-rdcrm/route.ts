@@ -1,4 +1,5 @@
-// app/api/framer-rdcrm/route.ts
+export const dynamic = 'force-dynamic';
+
 const RD_BASE = 'https://crm.rdstation.com/api/v1';
 
 async function rdFetch(path: string, method: string, body?: any) {
@@ -9,7 +10,6 @@ async function rdFetch(path: string, method: string, body?: any) {
       Authorization: `Token token=${process.env.RD_CRM_TOKEN || ''}`,
     },
     body: body ? JSON.stringify(body) : undefined,
-    // Importante: usar runtime Node (padrão) para permitir fetch externo com env
     cache: 'no-store',
   });
 
@@ -23,15 +23,57 @@ async function rdFetch(path: string, method: string, body?: any) {
   return json;
 }
 
+// Opcional: responder preflight, caso algum cliente faça OPTIONS
+export async function OPTIONS() {
+  return new Response(null, {
+    status: 204,
+    headers: {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'POST,OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+    },
+  });
+}
+
+function pick<T=any>(obj:any, keys:string[]): Record<string, any> {
+  const out: Record<string, any> = {};
+  for (const k of keys) if (obj && obj[k] != null) out[k] = obj[k];
+  return out;
+}
+
 export async function POST(req: Request) {
   try {
-    const payload = await req.json().catch(() => ({}));
-    const name = String(payload.name || payload.fullname || '').trim();
-    const email = String(payload.email || '').trim().toLowerCase();
-    const product = payload.product ? String(payload.product).trim() : '';
+    let payload: any = {};
+    // Tenta JSON
+    try { payload = await req.json(); } 
+    catch {
+      // Se não for JSON, tenta form-data (x-www-form-urlencoded/multipart)
+      const form = await req.formData().catch(() => null);
+      if (form) {
+        payload = Object.fromEntries(form.entries());
+      }
+    }
+
+    // Alguns construtores mandam envelope: { data: {...} } ou { fields: {...} }
+    const base = payload?.data || payload?.fields || payload;
+
+    // Tenta chaves comuns
+    const cands = [
+      base,
+      payload?.body,
+      payload?.payload,
+    ].find(Boolean) || {};
+
+    // Normaliza campos (aceita name/fullname, etc.)
+    const name = String(cands.name || cands.fullname || '').trim();
+    const email = String(cands.email || '').trim().toLowerCase();
+    const product = (cands.product != null) ? String(cands.product).trim() : '';
 
     if (!name || !email) {
-      return new Response(JSON.stringify({ error: 'Campos obrigatórios: name e email' }), { status: 400 });
+      return new Response(JSON.stringify({
+        error: 'Campos obrigatórios ausentes',
+        got: pick(cands, ['name','fullname','email','product'])
+      }), { status: 400 });
     }
 
     // 1) Criar/atualizar contato no RD CRM
@@ -41,10 +83,9 @@ export async function POST(req: Request) {
       cf_origin: 'Site Húngara - Framer',
       cf_product: product || null, // crie o campo personalizado no CRM
     };
-
     const contact = await rdFetch('/contacts', 'POST', contactBody);
 
-    // 2) (Opcional) Criar negociação automaticamente se tiver variáveis definidas
+    // 2) (Opcional) criar negociação
     if (process.env.RD_CRM_DEAL_STAGE_ID) {
       const dealBody: any = {
         title: product ? `Interesse: ${product} — Site` : 'Interesse — Site',
@@ -58,8 +99,19 @@ export async function POST(req: Request) {
       await rdFetch('/deals', 'POST', dealBody);
     }
 
-    return new Response(JSON.stringify({ ok: true, contact_id: contact?.id || null }), { status: 200 });
+    return new Response(JSON.stringify({ ok: true, contact_id: contact?.id || null }), {
+      status: 200,
+      headers: { 'Access-Control-Allow-Origin': '*' }
+    });
   } catch (err: any) {
-    return new Response(JSON.stringify({ error: err?.message || 'Erro inesperado' }), { status: 500 });
+    // Log no server p/ você ver em Runtime Logs
+    console.error('framer-rdcrm error:', err?.message || err);
+
+    return new Response(JSON.stringify({
+      error: err?.message || 'Erro inesperado'
+    }), {
+      status: 500,
+      headers: { 'Access-Control-Allow-Origin': '*' }
+    });
   }
 }
