@@ -19,7 +19,7 @@ export async function POST(req: Request) {
     console.log("===== Dados recebidos do Framer =====");
     console.log(JSON.stringify(payload, null, 2));
 
-    // Responde de volta com o que recebeu somente teste
+    // Responde de volta com o que recebeu AGORA VAI
     return new Response(
       JSON.stringify({
         ok: true,
