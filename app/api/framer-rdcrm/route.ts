@@ -2,58 +2,36 @@
 export const dynamic = 'force-dynamic';
 
 const RD_BASE = 'https://crm.rdstation.com/api/v1';
+const TOKEN = '689f3886d6aa60001809c1be';
 
-function json(res: any, status = 200) {
-  return new Response(JSON.stringify(res), {
+type AnyObj = Record<string, any>;
+
+function R(data: AnyObj, status = 200) {
+  return new Response(JSON.stringify(data), {
     status,
-    headers: {
-      'Content-Type': 'application/json',
-      'Access-Control-Allow-Origin': '*',
-    },
+    headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
   });
 }
 
-function mask(s: string) {
-  if (!s) return '(vazio)';
-  const a = s.slice(0, 4);
-  const b = s.slice(-4);
-  return `${a}...${b} (len=${s.length})`;
+function withToken(path: string) {
+  const u = new URL(`${RD_BASE}${path}`);
+  if (!TOKEN) throw new Error('RD_CRM_TOKEN não configurado');
+  u.searchParams.set('token', TOKEN);
+  return u.toString();
 }
 
-async function rdFetch(path: string, method: string, body?: any) {
-  const token = process.env.RD_CRM_TOKEN || '';
-
-  // LOG 1 — token lido da Vercel
-  console.log('[RD] token lido?', !!token, 'mask:', mask(token));
-
-  if (!token) throw new Error('RD_CRM_TOKEN não configurado na Vercel');
-
-  const url = `${RD_BASE}${path}`;
-  const payload = body ? JSON.stringify(body) : undefined;
-
-  // LOG 2 — chamada que vamos fazer
-  console.log('[RD] request ->', method, url, 'body:', body ? body : '(sem body)');
-
-  const r = await fetch(url, {
-    method,
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Token token=${token}`,
-    },
-    body: payload,
+async function rdPost(path: string, body: AnyObj) {
+  const res = await fetch(withToken(path), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+    body: JSON.stringify(body),
     cache: 'no-store',
   });
-
-  const text = await r.text();
-
-  // LOG 3 — resposta crua do RD
-  console.log('[RD] response <-', r.status, text || '(vazio)');
-
+  const text = await res.text();
   let data: any = null;
   try { data = text ? JSON.parse(text) : null; } catch { /* texto puro */ }
-
-  if (!r.ok) {
-    throw new Error(`RD CRM ${method} ${path} -> ${r.status} ${text}`);
+  if (!res.ok) {
+    throw new Error(`RD ${path} -> ${res.status} ${text}`);
   }
   return data;
 }
@@ -71,53 +49,110 @@ export async function OPTIONS() {
 
 export async function POST(req: Request) {
   try {
-    // Recebe payload (JSON ou form-data)
-    let body: any = {};
+    // 1) Captura do Framer (JSON ou form-data)
+    let payload: AnyObj = {};
     try {
-      body = await req.json();
+      payload = await req.json();
     } catch {
-      const form = await req.formData().catch(() => null);
-      if (form) body = Object.fromEntries(form.entries());
+      const fd = await req.formData().catch(() => null);
+      if (fd) payload = Object.fromEntries(fd.entries());
     }
-    const p = body?.data || body;
+    const p: AnyObj = payload?.data || payload;
 
-    // LOG 0 — o que chegou do Framer
-    console.log('[FRAMER] payload recebido:', p);
-
-    const name = String(p.name || '').trim();
-    const email = String(p.email || '').trim().toLowerCase();
+    // campos padrão do formulário
+    const name = String(p.name ?? '').trim();
+    const email = String(p.email ?? '').trim().toLowerCase();
     const product = p.product != null ? String(p.product).trim() : '';
 
     if (!name || !email) {
-      return json({ error: 'Campos obrigatórios: name e email', received: { name, email, product } }, 400);
+      return R({ error: 'Campos obrigatórios: name e email', received: p }, 400);
     }
 
-    // Cria/atualiza contato
-    const contactPayload = {
+    // 2) ----- CRIAR/ATUALIZAR CONTATO -----
+    // estrutura compatível com seu exemplo (emails como objetos e wrapper "contact")
+    const cfProductId = process.env.RD_CRM_CF_PRODUCT_ID; // opcional
+    const contact: AnyObj = {
       name,
-      emails: [email],
-      cf_origin: 'Site Húngara - Framer',
-      cf_product: product || null,
+      emails: [{ email }],
+      // base legal simples
+      legal_bases: [{ category: 'data_processing', status: 'granted', type: 'consent' }],
     };
-    const contact = await rdFetch('/contacts', 'POST', contactPayload);
-
-    // (Opcional) Criar negócio – mantenha desativado até 200 no /contacts
-    if (process.env.RD_CRM_DEAL_STAGE_ID) {
-      const dealPayload: any = {
-        title: product ? `Interesse: ${product} — Site` : 'Interesse — Site',
-        deal_stage_id: process.env.RD_CRM_DEAL_STAGE_ID,
-        deal_source_id: process.env.RD_CRM_DEAL_SOURCE_ID || undefined,
-        amount: 0,
-        contact_emails: [email],
-        owner_id: process.env.RD_CRM_OWNER_ID || undefined,
-        notes: product ? `Produto selecionado: ${product}` : undefined,
-      };
-      await rdFetch('/deals', 'POST', dealPayload);
+    if (cfProductId && product) {
+      contact.contact_custom_fields = [{ custom_field_id: cfProductId, value: product }];
     }
+    // você pode passar organization_id via ENV (opcional)
+    if (process.env.RD_CRM_ORG_ID) contact.organization_id = process.env.RD_CRM_ORG_ID;
 
-    return json({ ok: true, contact_id: contact?.id || null });
+    const contactRes = await rdPost('/contacts', { contact });
+
+    // 3) ----- CRIAR NEGOCIAÇÃO -----
+    // IDs opcionais por ENV
+    const dealStageId = process.env.RD_CRM_DEAL_STAGE_ID; // *** RECOMENDADO ***
+    const ownerId     = process.env.RD_CRM_OWNER_ID;      // opcional
+    const sourceId    = process.env.RD_CRM_SOURCE_ID;     // opcional (deal_source._id)
+    const campaignId  = process.env.RD_CRM_CAMPAIGN_ID;   // opcional
+
+    // contato mínimo para o array `contacts` do deal
+    const dealContact: AnyObj = {
+      name,
+      emails: [{ email }],
+      legal_bases: [{ category: 'data_processing', status: 'granted', type: 'consent' }],
+    };
+
+    // nome da negociação
+    const dealName =
+      product ? `Interesse: ${product} — Site` : `Interesse — Site`;
+
+    const dealPayload: AnyObj = {
+      // campanha (opcional)
+      ...(campaignId ? { campaign: { _id: campaignId } } : {}),
+      // contatos vinculados
+      contacts: [dealContact],
+      // corpo principal do deal
+      deal: {
+        name: dealName,
+        // importante: informe o estágio do funil se quiser já cair no lugar certo
+        ...(dealStageId ? { deal_stage_id: dealStageId } : {}),
+        ...(ownerId ? { user_id: ownerId } : {}),
+        rating: 1,
+      },
+      // origem do negócio (opcional)
+      ...(sourceId ? { deal_source: { _id: sourceId } } : {}),
+      // produtos do negócio (opcional; aqui mandamos 1 item com o "product" do form)
+      ...(product
+        ? {
+            deal_products: [
+              {
+                name: product,
+                amount: 1,
+                base_price: 0,
+                price: 0,
+                total: 0,
+                description: `Produto selecionado no formulário`,
+                recurrence: 'spare',
+                discount_type: 'value',
+              },
+            ],
+          }
+        : {}),
+      // organização (opcional)
+      ...(process.env.RD_CRM_ORG_ID
+        ? { organization: { _id: process.env.RD_CRM_ORG_ID } }
+        : {}),
+      // distribuição (opcional) – dono específico
+      ...(ownerId ? { distribution_settings: { owner: { id: ownerId, type: 'user' } } } : {}),
+    };
+
+    const dealRes = await rdPost('/deals', dealPayload);
+
+    return R({
+      ok: true,
+      contact: contactRes,
+      deal: dealRes,
+      mode: 'query-token',
+    });
   } catch (err: any) {
-    console.error('[API] framer-rdcrm error:', err?.message || err);
-    return json({ error: err?.message || 'Erro inesperado' }, 500);
+    console.error('[framer-rdcrm] error:', err?.message || err);
+    return R({ error: err?.message || 'Erro inesperado' }, 500);
   }
 }
