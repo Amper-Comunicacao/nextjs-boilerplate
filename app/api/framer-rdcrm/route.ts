@@ -15,7 +15,7 @@ function json(res: any, status = 200) {
 
 async function rdFetch(path: string, method: string, body?: any) {
   const token = process.env.RD_CRM_TOKEN || '';
-  if (!token) throw new Error('RD_CRM_TOKEN não configurado na Vercel');
+  if (!token) throw new Error('RD_CRM_TOKEN não configurado na Vercell');
 
   const r = await fetch(`${RD_BASE}${path}`, {
     method,
