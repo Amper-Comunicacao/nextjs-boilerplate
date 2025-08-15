@@ -62,6 +62,9 @@ export async function POST(req: Request) {
     // campos padrão do formulário
     const name = String(p.name ?? '').trim();
     const email = String(p.email ?? '').trim().toLowerCase();
+    const phone = String(p.phone ?? '').trim();
+    const area = String(p.area ?? '').trim();
+    const meet = String(p.meet ?? '').trim();
     const product = p.product != null ? String(p.product).trim() : '';
 
     if (!name || !email) {
@@ -74,6 +77,7 @@ export async function POST(req: Request) {
     const contact: AnyObj = {
       name,
       emails: [{ email }],
+      phones: [{ phone }],
       // base legal simples
       legal_bases: [{ category: 'data_processing', status: 'granted', type: 'consent' }],
     };
@@ -91,19 +95,29 @@ export async function POST(req: Request) {
     const ownerId     = process.env.RD_CRM_OWNER_ID;      // opcional
     const sourceId    = process.env.RD_CRM_SOURCE_ID;     // opcional (deal_source._id)
     const campaignId  = process.env.RD_CRM_CAMPAIGN_ID;   // opcional
+    const territorioFieldId = '67cb5e85884fd60021aad369';
+    const interesseFieldId = '689f7b214e605b001664425f';
 
     // contato mínimo para o array `contacts` do deal
     const dealContact: AnyObj = {
       name,
       emails: [{ email }],
+      phones: [{ phone }],
       legal_bases: [{ category: 'data_processing', status: 'granted', type: 'consent' }],
     };
 
     // nome da negociação
-    const dealName =
-      product ? `Interesse: ${product} — Site` : `Interesse — Site`;
+    // const dealName =
+    //   product ? `Interesse: ${product} — Site` : `Interesse — Site`;
+
+    const dealName = name;
+
+    const dealCustomFields: AnyObj[] = [];
+    if (territorioFieldId) dealCustomFields.push({ custom_field_id: territorioFieldId, value: area });
+    if (interesseFieldId) dealCustomFields.push({ custom_field_id: interesseFieldId, value: meet });
 
     const dealPayload: AnyObj = {
+      ...(dealCustomFields.length ? { deal_custom_fields: dealCustomFields } : {}),
       // campanha (opcional)
       ...(campaignId ? { campaign: { _id: campaignId } } : {}),
       // contatos vinculados
