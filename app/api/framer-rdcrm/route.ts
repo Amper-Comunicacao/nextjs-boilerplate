@@ -106,15 +106,15 @@ export async function POST(req: Request) {
       legal_bases: [{ category: 'data_processing', status: 'granted', type: 'consent' }],
     };
 
-    // nome da negociação
-    // const dealName =
-    //   product ? `Interesse: ${product} — Site` : `Interesse — Site`;
+    //nome da negociação
+    const dealName =
+      product ? `${name} - ${product}` : `${name}`;
 
-    const dealName = name;
+    // const dealName = name;
 
     const dealCustomFields: AnyObj[] = [];
     if (territorioFieldId) dealCustomFields.push({ custom_field_id: territorioFieldId, value: area });
-    if (interesseFieldId) dealCustomFields.push({ custom_field_id: interesseFieldId, value: meet });
+    if (interesseFieldId) dealCustomFields.push({ custom_field_id: interesseFieldId, value: product });
 
     const dealPayload: AnyObj = {
       ...(dealCustomFields.length ? { deal_custom_fields: dealCustomFields } : {}),
