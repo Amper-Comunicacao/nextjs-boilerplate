@@ -2,7 +2,7 @@
 export const dynamic = 'force-dynamic';
 
 const RD_BASE = 'https://crm.rdstation.com/api/v1';
-const TOKEN = process.env.RD_CRM_TOKEN || '';
+const TOKEN = '689f3886d6aa60001809c1be';
 
 type AnyObj = Record<string, any>;
 
