@@ -123,7 +123,6 @@ export async function POST(req: Request) {
     }
 
     const dealPayload: AnyObj = {
-      ...(dealCustomFields.length ? { deal_custom_fields: dealCustomFields } : {}),
       // campanha (opcional)
       ...(campaignId ? { campaign: { _id: campaignId } } : {}),
       // contatos vinculados
@@ -131,6 +130,7 @@ export async function POST(req: Request) {
       // corpo principal do deal
       deal: {
         name: dealName,
+        deal_custom_fields: dealCustomFields,
         // importante: informe o estágio do funil se quiser já cair no lugar certo
         ...(dealStageId ? { deal_stage_id: dealStageId } : {}),
         ...(ownerId ? { user_id: ownerId } : {}),
