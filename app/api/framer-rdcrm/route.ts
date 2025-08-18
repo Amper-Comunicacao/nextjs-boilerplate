@@ -93,7 +93,7 @@ export async function POST(req: Request) {
     // IDs opcionais por ENV
     const dealStageId = process.env.RD_CRM_DEAL_STAGE_ID; // *** RECOMENDADO ***
     const ownerId     = process.env.RD_CRM_OWNER_ID;      // opcional
-    const sourceId    = process.env.RD_CRM_SOURCE_ID;     // opcional (deal_source._id)
+    const sourceId    = process.env.RD_CRM_DEAL_SOURCE_ID;     // opcional (deal_source._id)
     const campaignId  = process.env.RD_CRM_CAMPAIGN_ID;   // opcional
     const areaFieldId = '67cb5e85884fd60021aad369';
     const meetFieldId = '68a3317ccd4b100018b4b220';
