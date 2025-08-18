@@ -20,6 +20,16 @@ function withToken(path: string) {
   return u.toString();
 }
 
+
+// async function rdGet(path: string) {
+//   const res = await fetch(`${RD_BASE}${path}?token=${TOKEN}`, {
+//     method: 'GET',
+//     headers: { Accept: 'application/json' },
+//   });
+//   if (!res.ok) throw new Error(`Erro no GET ${path}: ${res.status}`);
+//   return res.json();
+// }
+
 async function rdPost(path: string, body: AnyObj) {
   const res = await fetch(withToken(path), {
     method: 'POST',
@@ -48,43 +58,34 @@ export async function OPTIONS() {
 }
 
 // ----- Função para pegar ou criar campanha -----
-async function getOrCreateCampaign(campaignName: string) {
-  if (!campaignName) return undefined;
+// async function getOrCreateCampaign(campaignName: string) {
+//   if (!campaignName) return undefined;
 
-  // 1) Buscar campanhas existentes via GET
-  const res = await fetch(`${RD_BASE}/campaigns?limit=200&token=${TOKEN}`, {
-    method: 'GET',
-    headers: {accept: 'application/json', 'content-type': 'multipart/form-data'}
-  });
+//   // 1) Buscar campanhas existentes
+//   const campaignsRes = await rdGet('/campaigns');
 
-  if (!res.ok) throw new Error(`Erro ao buscar campanhas: ${res.status}`);
-  const campaignsRes = await res.json();
+//   let campaignObj = campaignsRes.find(
+//     (c: any) =>
+//       c.name?.trim().toLowerCase() === campaignName.trim().toLowerCase()
+//   );
 
-  console.log(campaignsRes);
+//   // 2) Se não existir, cria
+//   if (!campaignObj) {
+//     const newCampaign = await rdPost('/campaigns', {
+//       campaign: { name: campaignName },
+//     });
+//     campaignObj = newCampaign?.campaign || newCampaign;
+//   }
 
-  // 2) Procurar pelo nome (case-insensitive)
-  let campaignObj = campaignsRes.find(
-    (c: any) => c.name?.trim().toLowerCase() === campaignName.trim().toLowerCase()
-  );
-
-  // 3) Se não existir, criar via POST
-  if (!campaignObj) {
-    const newCampaign = await rdPost('/campaigns', { campaign: { name: campaignName } });
-    campaignObj = newCampaign?.campaign || newCampaign;
-    console.log(campaignObj);
-    console.log(campaignObj._id);
-  }
-
-
-  return campaignObj?._id;
-}
+//   return campaignObj?._id;
+// }
 
 export async function POST(req: Request) {
   try {
 
     const urlParams = new URL(req.url).searchParams;
     const campaignName = urlParams.get('utm_campaign')?.trim() || '';
-    const campaignId = await getOrCreateCampaign(campaignName);
+    // const campaignId = await getOrCreateCampaign(campaignName);
 
     // 1) Captura do Framer (JSON ou form-data)
     let payload: AnyObj = {};
@@ -102,7 +103,7 @@ export async function POST(req: Request) {
     const email = String(p.email ?? '').trim().toLowerCase();
     const phone = String(p.phone ?? '').trim();
     const area = String(p.area ?? '').trim();
-    const meet = String(p.meet ?? '').trim();
+    const meet = campaignName ?? 'Não funcionou'; //String(p.meet ?? '').trim();
     const product = p.product != null ? String(p.product).trim() : '';
 
     if (!name || !email) {
@@ -161,6 +162,7 @@ export async function POST(req: Request) {
     const dealName = product ? `${name} - ${product}` : `${name}`;
 
     const dealPayload: AnyObj = {
+      // ...(campaignId ? { campaign: { _id: campaignId } } : {}),
       // contatos vinculados
       contacts: [dealContact],
       // corpo principal do deal
@@ -172,8 +174,6 @@ export async function POST(req: Request) {
         ...(ownerId ? { user_id: ownerId } : {}),
         rating: 1,
       },
-      // campanha (opcional)
-      ...(campaignId ? { campaign: { _id: campaignId } } : {}),
       // origem do negócio (opcional)
       ...(sourceId ? { deal_source: { _id: sourceId } } : {}),
       // produtos do negócio (opcional; aqui mandamos 1 item com o "product" do form)
