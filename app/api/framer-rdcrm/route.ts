@@ -95,7 +95,8 @@ export async function POST(req: Request) {
     const ownerId     = process.env.RD_CRM_OWNER_ID;      // opcional
     const sourceId    = process.env.RD_CRM_SOURCE_ID;     // opcional (deal_source._id)
     const campaignId  = process.env.RD_CRM_CAMPAIGN_ID;   // opcional
-    const territorioFieldId = '67cb5e85884fd60021aad369';
+    const areaFieldId = '67cb5e85884fd60021aad369';
+    const meetFieldId = '68a3317ccd4b100018b4b220';
     const interesseFieldId = '689f7b214e605b001664425f';
 
     // contato mínimo para o array `contacts` do deal
@@ -107,14 +108,19 @@ export async function POST(req: Request) {
     };
 
     //nome da negociação
-    const dealName =
-      product ? `${name} - ${product}` : `${name}`;
+    const dealName = product ? `${name} - ${product}` : `${name}`;
 
-    // const dealName = name;
 
     const dealCustomFields: AnyObj[] = [];
-    if (territorioFieldId) dealCustomFields.push({ custom_field_id: territorioFieldId, value: area });
-    if (interesseFieldId) dealCustomFields.push({ custom_field_id: interesseFieldId, value: product });
+    if (areaFieldId && area) {
+      dealCustomFields.push({ custom_field_id: areaFieldId, value: area });
+    }
+    if (meetFieldId && meet) {
+      dealCustomFields.push({ custom_field_id: meetFieldId, value: meet });
+    }
+    if (interesseFieldId && product) {
+      dealCustomFields.push({ custom_field_id: interesseFieldId, value: product });
+    }
 
     const dealPayload: AnyObj = {
       ...(dealCustomFields.length ? { deal_custom_fields: dealCustomFields } : {}),
