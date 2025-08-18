@@ -2,7 +2,7 @@
 export const dynamic = 'force-dynamic';
 
 const RD_BASE = 'https://crm.rdstation.com/api/v1';
-const TOKEN = '689f3886d6aa60001809c1be';
+const TOKEN = process.env.RD_CRM_TOKEN;;
 
 type AnyObj = Record<string, any>;
 
@@ -36,6 +36,23 @@ async function rdPost(path: string, body: AnyObj) {
   return data;
 }
 
+// ----- Função para pegar ou criar campanha -----
+async function getOrCreateCampaign(campaignName: string) {
+  if (!campaignName) return undefined;
+
+  // buscar campanhas existentes
+  const campaignsRes = await rdPost('/campaigns', {});
+  let campaignObj = campaignsRes.find((c: any) => c.name === campaignName);
+
+  // se não existir, criar
+  if (!campaignObj) {
+    const newCampaign = await rdPost('/campaigns', { campaign: { name: campaignName } });
+    campaignObj = newCampaign;
+  }
+
+  return campaignObj?._id;
+}
+
 export async function OPTIONS() {
   return new Response(null, {
     status: 204,
@@ -49,8 +66,13 @@ export async function OPTIONS() {
 
 export async function POST(req: Request) {
   try {
+
+    const urlParams = new URL(req.url).searchParams;
+    const campaignName = urlParams.get('utm_campaign') || '';
+
     // 1) Captura do Framer (JSON ou form-data)
     let payload: AnyObj = {};
+
     try {
       payload = await req.json();
     } catch {
@@ -94,22 +116,14 @@ export async function POST(req: Request) {
     const dealStageId = process.env.RD_CRM_DEAL_STAGE_ID; // *** RECOMENDADO ***
     const ownerId     = process.env.RD_CRM_OWNER_ID;      // opcional
     const sourceId    = process.env.RD_CRM_DEAL_SOURCE_ID;     // opcional (deal_source._id)
-    const campaignId  = process.env.RD_CRM_CAMPAIGN_ID;   // opcional
+
+    //Pegar IDs da campanha e fonte
+    const campaignId = await getOrCreateCampaign(campaignName);
+
+    //Preparar custom fields do deal
     const areaFieldId = '67cb5e85884fd60021aad369';
     const meetFieldId = '68a3317ccd4b100018b4b220';
     const interesseFieldId = '689f7b214e605b001664425f';
-
-    // contato mínimo para o array `contacts` do deal
-    const dealContact: AnyObj = {
-      name,
-      emails: [{ email }],
-      phones: [{ phone }],
-      legal_bases: [{ category: 'data_processing', status: 'granted', type: 'consent' }],
-    };
-
-    //nome da negociação
-    const dealName = product ? `${name} - ${product}` : `${name}`;
-
 
     const dealCustomFields: AnyObj[] = [];
     if (areaFieldId && area) {
@@ -122,9 +136,18 @@ export async function POST(req: Request) {
       dealCustomFields.push({ custom_field_id: interesseFieldId, value: product });
     }
 
+    // contato mínimo para o array `contacts` do deal
+    const dealContact: AnyObj = {
+      name,
+      emails: [{ email }],
+      phones: [{ phone }],
+      legal_bases: [{ category: 'data_processing', status: 'granted', type: 'consent' }],
+    };
+
+    //nome da negociação
+    const dealName = product ? `${name} - ${product}` : `${name}`;
+
     const dealPayload: AnyObj = {
-      // campanha (opcional)
-      ...(campaignId ? { campaign: { _id: campaignId } } : {}),
       // contatos vinculados
       contacts: [dealContact],
       // corpo principal do deal
@@ -136,6 +159,8 @@ export async function POST(req: Request) {
         ...(ownerId ? { user_id: ownerId } : {}),
         rating: 1,
       },
+      // campanha (opcional)
+      ...(campaignId ? { campaign: { _id: campaignId } } : {}),
       // origem do negócio (opcional)
       ...(sourceId ? { deal_source: { _id: sourceId } } : {}),
       // produtos do negócio (opcional; aqui mandamos 1 item com o "product" do form)
