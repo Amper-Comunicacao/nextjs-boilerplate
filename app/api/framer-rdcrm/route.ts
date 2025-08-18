@@ -83,8 +83,8 @@ export async function OPTIONS() {
 export async function POST(req: Request) {
   try {
 
-    const urlParams = new URL(req.url).searchParams;
-    const campaignName = urlParams.get('utm_campaign')?.trim() || '';
+    const { searchParams } = new URL(req.url);
+    const campaignName = searchParams.get("utm_campaign")?.trim() || "aaa";
     // const campaignId = await getOrCreateCampaign(campaignName);
 
     // 1) Captura do Framer (JSON ou form-data)
