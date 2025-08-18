@@ -2,7 +2,7 @@
 export const dynamic = 'force-dynamic';
 
 const RD_BASE = 'https://crm.rdstation.com/api/v1';
-const TOKEN = process.env.RD_CRM_TOKEN;;
+const TOKEN = process.env.RD_CRM_TOKEN;
 
 type AnyObj = Record<string, any>;
 
@@ -36,23 +36,6 @@ async function rdPost(path: string, body: AnyObj) {
   return data;
 }
 
-// ----- Função para pegar ou criar campanha -----
-async function getOrCreateCampaign(campaignName: string) {
-  if (!campaignName) return undefined;
-
-  // buscar campanhas existentes
-  const campaignsRes = await rdPost('/campaigns', {});
-  let campaignObj = campaignsRes.find((c: any) => c.name === campaignName);
-
-  // se não existir, criar
-  if (!campaignObj) {
-    const newCampaign = await rdPost('/campaigns', { campaign: { name: campaignName } });
-    campaignObj = newCampaign;
-  }
-
-  return campaignObj?._id;
-}
-
 export async function OPTIONS() {
   return new Response(null, {
     status: 204,
@@ -64,11 +47,29 @@ export async function OPTIONS() {
   });
 }
 
+// ----- Função para pegar ou criar campanha -----
+async function getOrCreateCampaign(campaignName: string) {
+  if (!campaignName) return undefined;
+
+  const campaignsRes = await rdPost('/campaigns', {});
+  let campaignObj = campaignsRes.find(
+    (c: any) => c.name?.trim().toLowerCase() === campaignName?.trim().toLowerCase()
+  );
+
+  if (!campaignObj) {
+    const newCampaign = await rdPost('/campaigns', { campaign: { name: campaignName } });
+    campaignObj = newCampaign?.campaign || newCampaign;
+  }
+
+  return campaignObj?._id;
+}
+
 export async function POST(req: Request) {
   try {
 
     const urlParams = new URL(req.url).searchParams;
-    const campaignName = urlParams.get('utm_campaign') || '';
+    const campaignName = urlParams.get('utm_campaign')?.trim() || '';
+    const campaignId = await getOrCreateCampaign(campaignName);
 
     // 1) Captura do Framer (JSON ou form-data)
     let payload: AnyObj = {};
@@ -116,9 +117,6 @@ export async function POST(req: Request) {
     const dealStageId = process.env.RD_CRM_DEAL_STAGE_ID; // *** RECOMENDADO ***
     const ownerId     = process.env.RD_CRM_OWNER_ID;      // opcional
     const sourceId    = process.env.RD_CRM_DEAL_SOURCE_ID;     // opcional (deal_source._id)
-
-    //Pegar IDs da campanha e fonte
-    const campaignId = await getOrCreateCampaign(campaignName);
 
     //Preparar custom fields do deal
     const areaFieldId = '67cb5e85884fd60021aad369';
@@ -188,6 +186,7 @@ export async function POST(req: Request) {
       ...(ownerId ? { distribution_settings: { owner: { id: ownerId, type: 'user' } } } : {}),
     };
 
+    console.log({ campaignId });
     const dealRes = await rdPost('/deals', dealPayload);
 
     return R({
