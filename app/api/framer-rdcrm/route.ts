@@ -103,7 +103,7 @@ export async function POST(req: Request) {
     const email = String(p.email ?? '').trim().toLowerCase();
     const phone = String(p.phone ?? '').trim();
     const area = String(p.area ?? '').trim();
-    const meet = campaignName ?? 'Não funcionou'; //String(p.meet ?? '').trim();
+    const meet = String(p.meet ?? '').trim();
     const product = p.product != null ? String(p.product).trim() : '';
 
     if (!name || !email) {
