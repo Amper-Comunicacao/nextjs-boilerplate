@@ -51,15 +51,30 @@ export async function OPTIONS() {
 async function getOrCreateCampaign(campaignName: string) {
   if (!campaignName) return undefined;
 
-  const campaignsRes = await rdPost('/campaigns', {});
+  // 1) Buscar campanhas existentes via GET
+  const res = await fetch(`${RD_BASE}/campaigns?limit=200&token=${TOKEN}`, {
+    method: 'GET',
+    headers: {accept: 'application/json', 'content-type': 'multipart/form-data'}
+  });
+
+  if (!res.ok) throw new Error(`Erro ao buscar campanhas: ${res.status}`);
+  const campaignsRes = await res.json();
+
+  console.log(campaignsRes);
+
+  // 2) Procurar pelo nome (case-insensitive)
   let campaignObj = campaignsRes.find(
-    (c: any) => c.name?.trim().toLowerCase() === campaignName?.trim().toLowerCase()
+    (c: any) => c.name?.trim().toLowerCase() === campaignName.trim().toLowerCase()
   );
 
+  // 3) Se não existir, criar via POST
   if (!campaignObj) {
     const newCampaign = await rdPost('/campaigns', { campaign: { name: campaignName } });
     campaignObj = newCampaign?.campaign || newCampaign;
+    console.log(campaignObj);
+    console.log(campaignObj._id);
   }
+
 
   return campaignObj?._id;
 }
@@ -186,7 +201,6 @@ export async function POST(req: Request) {
       ...(ownerId ? { distribution_settings: { owner: { id: ownerId, type: 'user' } } } : {}),
     };
 
-    console.log({ campaignId });
     const dealRes = await rdPost('/deals', dealPayload);
 
     return R({
