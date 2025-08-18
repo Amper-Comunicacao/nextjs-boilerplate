@@ -1,4 +1,4 @@
-// app/api/framer-rdcrm/route.ts
+// app/api/framer-rdcrm/route.ts teste
 export const dynamic = 'force-dynamic';
 
 const RD_BASE = 'https://crm.rdstation.com/api/v1';
