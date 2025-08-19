@@ -51,8 +51,8 @@ export async function POST(req: Request) {
   try {
 
     // --- PEGAR PARAMS DA URL ---
-    const { searchParams } = new URL(req.url);
-    const utm_campaign = searchParams.get("utm_campaign")?.trim() || "";
+    // const { searchParams } = new URL(req.url);
+    // const utm_campaign = searchParams.get("utm_campaign")?.trim() || "";
 
     // 1) Captura do Framer (JSON ou form-data)
     let payload: AnyObj = {};
@@ -72,6 +72,9 @@ export async function POST(req: Request) {
     const area = String(p.area ?? '').trim();
     const meet = String(p.meet ?? '').trim();
     const product = p.product != null ? String(p.product).trim() : '';
+    const utm_campaign = String(p.utm_campaign ?? '').trim();
+    const utm_source = String(p.utm_source ?? '').trim();
+    const utm_medium = String(p.utm_medium ?? '').trim();
 
     // aqui capturamos o utm_campaign que veio do framer
     // const teste = String(p.utm_campaign ?? '').trim();
@@ -172,9 +175,6 @@ export async function POST(req: Request) {
     };
 
     const dealRes = await rdPost('/deals', dealPayload);
-
-    console.log(meet);
-    console.log(utm_campaign);
 
     return R({
       ok: true,
