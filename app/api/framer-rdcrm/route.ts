@@ -111,6 +111,7 @@ export async function POST(req: Request) {
     const areaFieldId = '67cb5e85884fd60021aad369';
     const meetFieldId = '68a3317ccd4b100018b4b220';
     const interesseFieldId = '689f7b214e605b001664425f';
+    const campanhaMarketingId = '68a4a014f4ef5d001b0223fa';
 
     const dealCustomFields: AnyObj[] = [];
     if (areaFieldId && area) {
@@ -121,6 +122,9 @@ export async function POST(req: Request) {
     }
     if (interesseFieldId && product) {
       dealCustomFields.push({ custom_field_id: interesseFieldId, value: product });
+    }
+    if (campanhaMarketingId && utm_campaign) {
+      dealCustomFields.push({ custom_field_id: campanhaMarketingId, value: utm_campaign });
     }
 
     // contato mínimo para o array `contacts` do deal
