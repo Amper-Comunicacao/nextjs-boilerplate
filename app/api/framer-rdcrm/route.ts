@@ -20,16 +20,6 @@ function withToken(path: string) {
   return u.toString();
 }
 
-
-// async function rdGet(path: string) {
-//   const res = await fetch(`${RD_BASE}${path}?token=${TOKEN}`, {
-//     method: 'GET',
-//     headers: { Accept: 'application/json' },
-//   });
-//   if (!res.ok) throw new Error(`Erro no GET ${path}: ${res.status}`);
-//   return res.json();
-// }
-
 async function rdPost(path: string, body: AnyObj) {
   const res = await fetch(withToken(path), {
     method: 'POST',
@@ -57,35 +47,12 @@ export async function OPTIONS() {
   });
 }
 
-// ----- Função para pegar ou criar campanha -----
-// async function getOrCreateCampaign(campaignName: string) {
-//   if (!campaignName) return undefined;
-
-//   // 1) Buscar campanhas existentes
-//   const campaignsRes = await rdGet('/campaigns');
-
-//   let campaignObj = campaignsRes.find(
-//     (c: any) =>
-//       c.name?.trim().toLowerCase() === campaignName.trim().toLowerCase()
-//   );
-
-//   // 2) Se não existir, cria
-//   if (!campaignObj) {
-//     const newCampaign = await rdPost('/campaigns', {
-//       campaign: { name: campaignName },
-//     });
-//     campaignObj = newCampaign?.campaign || newCampaign;
-//   }
-
-//   return campaignObj?._id;
-// }
-
 export async function POST(req: Request) {
   try {
 
+    // --- PEGAR PARAMS DA URL ---
     const { searchParams } = new URL(req.url);
-    const campaignName = searchParams.get("utm_campaign")?.trim() || "aaa";
-    // const campaignId = await getOrCreateCampaign(campaignName);
+    const utm_campaign = searchParams.get("utm_campaign")?.trim() || "";
 
     // 1) Captura do Framer (JSON ou form-data)
     let payload: AnyObj = {};
@@ -103,7 +70,7 @@ export async function POST(req: Request) {
     const email = String(p.email ?? '').trim().toLowerCase();
     const phone = String(p.phone ?? '').trim();
     const area = String(p.area ?? '').trim();
-    const meet = String(p.meet ?? '').trim();
+    const meet = utm_campaign; //String(p.meet ?? '').trim();
     const product = p.product != null ? String(p.product).trim() : '';
 
     if (!name || !email) {
@@ -134,7 +101,7 @@ export async function POST(req: Request) {
     const ownerId     = process.env.RD_CRM_OWNER_ID;      // opcional
     const sourceId    = process.env.RD_CRM_DEAL_SOURCE_ID;     // opcional (deal_source._id)
 
-    //Preparar custom fields do deal
+    //Preparar custom fields do deal - IDS da RD
     const areaFieldId = '67cb5e85884fd60021aad369';
     const meetFieldId = '68a3317ccd4b100018b4b220';
     const interesseFieldId = '689f7b214e605b001664425f';
@@ -202,6 +169,9 @@ export async function POST(req: Request) {
     };
 
     const dealRes = await rdPost('/deals', dealPayload);
+
+    console.log(meet);
+    console.log(utm_campaign);
 
     return R({
       ok: true,
