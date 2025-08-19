@@ -70,8 +70,11 @@ export async function POST(req: Request) {
     const email = String(p.email ?? '').trim().toLowerCase();
     const phone = String(p.phone ?? '').trim();
     const area = String(p.area ?? '').trim();
-    const meet = utm_campaign; //String(p.meet ?? '').trim();
+    const meet = String(p.meet ?? '').trim();
     const product = p.product != null ? String(p.product).trim() : '';
+
+    // aqui capturamos o utm_campaign que veio do framer
+    const teste = String(p.utm_campaign ?? '').trim();
 
     if (!name || !email) {
       return R({ error: 'Campos obrigatórios: name e email', received: p }, 400);
@@ -111,7 +114,7 @@ export async function POST(req: Request) {
       dealCustomFields.push({ custom_field_id: areaFieldId, value: area });
     }
     if (meetFieldId && meet) {
-      dealCustomFields.push({ custom_field_id: meetFieldId, value: meet });
+      dealCustomFields.push({ custom_field_id: meetFieldId, value: teste });
     }
     if (interesseFieldId && product) {
       dealCustomFields.push({ custom_field_id: interesseFieldId, value: product });
