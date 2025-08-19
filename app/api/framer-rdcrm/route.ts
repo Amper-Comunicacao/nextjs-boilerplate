@@ -116,8 +116,8 @@ export async function POST(req: Request) {
     if (areaFieldId && area) {
       dealCustomFields.push({ custom_field_id: areaFieldId, value: area });
     }
-    if (meetFieldId && utm_campaign) {
-      dealCustomFields.push({ custom_field_id: meetFieldId, value: utm_campaign });
+    if (meetFieldId && meet) {
+      dealCustomFields.push({ custom_field_id: meetFieldId, value: meet });
     }
     if (interesseFieldId && product) {
       dealCustomFields.push({ custom_field_id: interesseFieldId, value: product });
@@ -132,7 +132,7 @@ export async function POST(req: Request) {
     };
 
     //nome da negociação
-    const dealName = product ? `${name} - ${product}` : `${name}`;
+    const dealName = product ? `${name} - ${product} - ${utm_campaign}` : `${name} - ${utm_campaign}`;
 
     const dealPayload: AnyObj = {
       // ...(campaignId ? { campaign: { _id: campaignId } } : {}),
