@@ -74,7 +74,7 @@ export async function POST(req: Request) {
     const product = p.product != null ? String(p.product).trim() : '';
 
     // aqui capturamos o utm_campaign que veio do framer
-    const teste = String(p.utm_campaign ?? '').trim();
+    // const teste = String(p.utm_campaign ?? '').trim();
 
     if (!name || !email) {
       return R({ error: 'Campos obrigatórios: name e email', received: p }, 400);
@@ -114,7 +114,7 @@ export async function POST(req: Request) {
       dealCustomFields.push({ custom_field_id: areaFieldId, value: area });
     }
     if (meetFieldId && meet) {
-      dealCustomFields.push({ custom_field_id: meetFieldId, value: teste });
+      dealCustomFields.push({ custom_field_id: meetFieldId, value: utm_campaign });
     }
     if (interesseFieldId && product) {
       dealCustomFields.push({ custom_field_id: interesseFieldId, value: product });
