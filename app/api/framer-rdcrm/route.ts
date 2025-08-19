@@ -116,7 +116,7 @@ export async function POST(req: Request) {
     if (areaFieldId && area) {
       dealCustomFields.push({ custom_field_id: areaFieldId, value: area });
     }
-    if (meetFieldId && meet) {
+    if (meetFieldId && utm_campaign) {
       dealCustomFields.push({ custom_field_id: meetFieldId, value: utm_campaign });
     }
     if (interesseFieldId && product) {
