@@ -72,9 +72,11 @@ export async function POST(req: Request) {
     const area = String(p.area ?? '').trim();
     const meet = String(p.meet ?? '').trim();
     const product = p.product != null ? String(p.product).trim() : '';
-    const utm_campaign = String(p.utm_campaign ?? 'Orgânico').trim();
+    const utm_campaign = String(p.utm_campaign ?? '').trim();
     const utm_source = String(p.utm_source ?? '').trim();
     const utm_medium = String(p.utm_medium ?? '').trim();
+
+    if (!utm_campaign) utm_campaign = "Orgânico";
 
     // aqui capturamos o utm_campaign que veio do framer
     // const teste = String(p.utm_campaign ?? '').trim();
