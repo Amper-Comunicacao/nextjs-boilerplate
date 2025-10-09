@@ -50,10 +50,6 @@ export async function OPTIONS() {
 export async function POST(req: Request) {
   try {
 
-    // --- PEGAR PARAMS DA URL ---
-    // const { searchParams } = new URL(req.url);
-    // const utm_campaign = searchParams.get("utm_campaign")?.trim() || "";
-
     // 1) Captura do Framer (JSON ou form-data)
     let payload: AnyObj = {};
 
@@ -72,9 +68,9 @@ export async function POST(req: Request) {
     const area = String(p.area ?? '').trim();
     const meet = String(p.meet ?? '').trim();
     const product = p.product != null ? String(p.product).trim() : '';
-    let utm_campaign = String(p.utm_campaign ?? '').trim();
-    let utm_source = String(p.utm_source ?? '').trim();
-    let utm_medium = String(p.utm_medium ?? '').trim();
+    const utm_campaign = p.utm_campaign;
+    const utm_source = p.utm_source;
+    const utm_medium = p.utm_medium;
 
     if (!name || !email) {
       return R({ error: 'Campos obrigatórios: name e email', received: p }, 400);
