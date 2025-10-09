@@ -74,7 +74,7 @@ export async function POST(req: Request) {
     const product = p.product != null ? String(p.product).trim() : '';
     // let utm_campaign = String(p.utm_campaign ?? '').trim() || 'Orgânico';
 
-    let utm_campaign = String(p.utm_campaign ?? '').trim();
+    let utm_campaign = String(p.utm_campaign ?? 'Orgânico').trim();
     let utm_source = String(p.utm_source ?? '').trim();
     let utm_medium = String(p.utm_medium ?? '').trim();
 
