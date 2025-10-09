@@ -72,7 +72,11 @@ export async function POST(req: Request) {
     const area = String(p.area ?? '').trim();
     const meet = String(p.meet ?? '').trim();
     const product = p.product != null ? String(p.product).trim() : '';
-    const utm_campaign = p.utm_campaign != null && String(p.utm_campaign).trim() !== '' ? String(p.utm_campaign).trim() : 'Orgânico';
+
+    let utm_campaign = p.utm_campaign;
+    if (utm_campaign == '' || utm_campaign == null) {
+      utm_campaign = "Orgânico";
+    }
 
     let utm_source = String(p.utm_source ?? '').trim();
     let utm_medium = String(p.utm_medium ?? '').trim();
