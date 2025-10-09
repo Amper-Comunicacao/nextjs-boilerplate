@@ -68,9 +68,9 @@ export async function POST(req: Request) {
     const area = String(p.area ?? '').trim();
     const meet = String(p.meet ?? '').trim();
     const product = p.product != null ? String(p.product).trim() : '';
-    const utm_campaign = p.utm_campaign;
-    const utm_source = p.utm_source;
-    const utm_medium = p.utm_medium;
+    const utm_campaign = String(p.utm_campaign ?? '').trim() || 'Orgânico';
+    const utm_source = String(p.utm_source ?? '').trim() || 'Orgânico';
+    const utm_medium = String(p.utm_medium ?? '').trim() || 'Orgânico';
 
     if (!name || !email) {
       return R({ error: 'Campos obrigatórios: name e email', received: p }, 400);
